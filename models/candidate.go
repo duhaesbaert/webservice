@@ -95,6 +95,8 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	return Candidate{}, fmt.Errorf("Candidate '%v' was not found", c.FirstName)
 }
 
+//Remove Application from Candidate
+//Method responsible for removing the application from the candidate, either when rolling back due to an error, or when deleting an application, to remove it form the Candidate's records.
 func RemoveApplicationFromCandidate(a Application) error {
 	for i, can := range candidates {
 		if can.ID == a.CandidateProfileID {
@@ -113,7 +115,8 @@ func DeleteCandidate(id int) error {
 	for i, can := range candidates {
 		if can.ID == id {
 			for _, app := range can.JobsApplied {
-				RemoveApplicationFromJobReq(app)
+				//The delete application method will remove the application from Candidate and from JobRequisition (slower than specific method)
+				DeleteApplication(app.ID)
 			}
 			candidates = append(candidates[:i], candidates[i+1:]...)
 			return nil

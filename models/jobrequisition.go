@@ -90,6 +90,8 @@ func AddApplicationToJobReq(a Application) error {
 	return fmt.Errorf("Cannot add Application to Job Requisition")
 }
 
+//Remove Application from Job Requisition
+//Method used for either rolling back when it is not possible to complete the addition of the application on other Entities, or when deleting an Application, to have it removed from the Job Requisition as well.
 func RemoveApplicationFromJobReq(a Application) error {
 	for i, j := range jobReqs {
 		if a.JobRequisitionID == j.ID {

@@ -98,3 +98,17 @@ func DeleteApplication(id int) error {
 	}
 	return fmt.Errorf("Application with ID '%v' not found", id)
 }
+
+func RemoveCandidateApplicationsByID(canID int) error {
+	for i, app := range applications {
+		if app.CandidateProfileID == canID {
+			err := RemoveApplicationFromJobReq(*app)
+			if err != nil {
+				return fmt.Errorf("Could not remove applications from Job Requisitions")
+			}
+
+			applications = append(applications[:i], applications[i+1:]...)
+		}
+	}
+	return nil
+}
