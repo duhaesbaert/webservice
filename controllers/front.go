@@ -10,6 +10,7 @@ func RegisterControllers() {
 	c := newCandidateController()
 	cntC := newCountryController()
 	jr := newJobRequisitionController()
+	jrp := newJobReqPostedController()
 	a := newApplicationController()
 
 	//Candidate controller
@@ -24,6 +25,11 @@ func RegisterControllers() {
 	http.Handle("/jobrequisition", *jr)
 	http.Handle("/jobrequisition/", *jr)
 
+	//Job Req Posting Controller
+	http.Handle("/jobrequisition/posted", *jrp)
+	http.Handle("/jobrequisition/posted/", *jrp)
+
+	//Application Controller
 	http.Handle("/application", a)
 	http.Handle("/application/", a)
 }
@@ -32,3 +38,4 @@ func encodeResponseAsJSON(data interface{}, w io.Writer) {
 	enc := json.NewEncoder(w)
 	enc.Encode(data)
 }
+

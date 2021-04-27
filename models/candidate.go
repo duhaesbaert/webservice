@@ -80,7 +80,7 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	}
 
 	if c.FirstName == "" || c.LastName == "" || c.Email == "" {
-		return Candidate{}, fmt.Errorf("All mandatory fields should populated")
+		return Candidate{}, fmt.Errorf("All mandatory fields should be populated")
 	}
 
 	//Update Candidate
@@ -95,8 +95,6 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	return Candidate{}, fmt.Errorf("Candidate '%v' was not found", c.FirstName)
 }
 
-//Remove Application from Candidate
-//Method responsible for removing the application from the candidate, either when rolling back due to an error, or when deleting an application, to remove it form the Candidate's records.
 func RemoveApplicationFromCandidate(a Application) error {
 	for i, can := range candidates {
 		if can.ID == a.CandidateProfileID {

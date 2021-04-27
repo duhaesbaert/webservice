@@ -31,6 +31,16 @@ func GetJobRequisitionByID(id int) (JobRequisition, error) {
 	return JobRequisition{}, fmt.Errorf("Job Requisition with ID '%v' not found", id)
 }
 
+func GetJobRequisitionPosted() []*JobRequisition{
+	var postedReqs []*JobRequisition
+	for _, jr := range jobReqs {
+		if jr.PostingStatus {
+			postedReqs = append(postedReqs, jr)
+		}
+	}
+	return postedReqs
+}
+
 func AddJobRequisition(jr JobRequisition) (JobRequisition, error) {
 	//Validation section
 	if jr.ID != 0 {
@@ -90,8 +100,6 @@ func AddApplicationToJobReq(a Application) error {
 	return fmt.Errorf("Cannot add Application to Job Requisition")
 }
 
-//Remove Application from Job Requisition
-//Method used for either rolling back when it is not possible to complete the addition of the application on other Entities, or when deleting an Application, to have it removed from the Job Requisition as well.
 func RemoveApplicationFromJobReq(a Application) error {
 	for i, j := range jobReqs {
 		if a.JobRequisitionID == j.ID {
@@ -122,7 +130,7 @@ func DeleteJobRequisition(id int) error {
 func IsJobReqPosted(id int) (bool, error) {
 	jr, err := GetJobRequisitionByID(id)
 	if err != nil {
-		return false, fmt.Errorf("Counld not get Job Requisition '%v'", id)
+		return false, fmt.Errorf("Counld not find Job Requisition '%v'", id)
 	}
 
 	return jr.PostingStatus, nil
