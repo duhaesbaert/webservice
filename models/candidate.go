@@ -10,6 +10,7 @@ type Candidate struct {
 	LastName    string
 	Email       string
 	Address     string
+	Tags		[]Tag
 	CountryObj  Country
 	JobsApplied []Application
 }
@@ -33,7 +34,7 @@ func GetCandidateByID(id int) (Candidate, error) {
 }
 
 func AddCandidate(c Candidate) (Candidate, error) {
-	//Validation section
+	//Validation
 	if c.ID != 0 {
 		return Candidate{}, fmt.Errorf("Candidate must not include ID")
 	}
