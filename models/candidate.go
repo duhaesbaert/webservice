@@ -55,6 +55,13 @@ func AddCandidate(c Candidate) (Candidate, error) {
 	}
 
 	//Add new Candidate
+
+	//Check if tags are part of the candidate creation
+	if c.Tags != nil {
+		//Validate if tag exists to Add/Reuse
+		c.Tags = ValidateTags(c.Tags)
+	}
+
 	c.ID = nextCanID
 	nextCanID++
 	candidates = append(candidates, &c)
@@ -87,6 +94,13 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	//Update Candidate
 	for i, can := range candidates {
 		if c.ID == can.ID {
+
+			//Check if tags are on the update payload
+			if c.Tags != nil {
+				//Validate if tag exist to add/reuse
+				c.Tags = ValidateTags(c.Tags)
+			}
+
 			candidates[i] = &c
 			return c, nil
 		}
@@ -122,4 +136,19 @@ func DeleteCandidate(id int) error {
 		}
 	}
 	return fmt.Errorf("Candidate with id '%v' not found", id)
+}
+
+func ValidateTags(cTags []Tag) ([]Tag) {
+	for _, t := range cTags	{
+		b,id,_ := ExistTagByLabel(t.Label)
+		if !b {
+			AddTag(t)
+			continue
+		}
+		if b {
+			t.ID = id
+			continue
+		}
+	}
+	return cTags
 }
