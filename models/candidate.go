@@ -94,13 +94,15 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	//Update Candidate
 	for i, can := range candidates {
 		if c.ID == can.ID {
-
 			//Check if tags are on the update payload
 			if c.Tags != nil {
 				//Validate if tag exist to add/reuse
 				c.Tags = ValidateTags(c.Tags)
 			}
+			//Removes the possibility of editing the JobsApplied when updating candidate
+			c.JobsApplied = candidates[i].JobsApplied
 
+			//Updates candidate
 			candidates[i] = &c
 			return c, nil
 		}
