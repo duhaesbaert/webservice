@@ -64,8 +64,8 @@ func AddApplication(a Application) (Application, error) {
 	}
 
 	//Add application into application list
-	nextAppID++
 	applications[nextAppID] = &a
+	nextAppID++
 	return a, nil
 }
 
