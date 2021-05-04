@@ -16,19 +16,17 @@ type Candidate struct {
 }
 
 var (
-	candidates []*Candidate
+	candidates = make(map[int]*Candidate)
 	nextCanID  = 1
 )
 
-func GetCandidates() []*Candidate {
+func GetCandidates() map[int]*Candidate {
 	return candidates
 }
 
 func GetCandidateByID(id int) (Candidate, error) {
-	for _, c := range candidates {
-		if id == c.ID {
-			return *c, nil
-		}
+	if c, found := candidates[id]; found {
+		return *c, nil
 	}
 	return Candidate{}, fmt.Errorf("Candidate with ID '%v' not found", id)
 }
@@ -64,18 +62,17 @@ func AddCandidate(c Candidate) (Candidate, error) {
 	}
 
 	c.ID = nextCanID
+	candidates[nextCanID] = &c
 	nextCanID++
-	candidates = append(candidates, &c)
 	return c, nil
 }
 
 func AddApplicationToCandidate(a Application) error {
-	for i, c := range candidates {
-		if a.CandidateProfileID == c.ID {
-			candidates[i].JobsApplied = append(candidates[i].JobsApplied, a)
-			return nil
-		}
+	if _, found := candidates[a.CandidateProfileID]; found {
+		candidates[a.CandidateProfileID].JobsApplied = append(candidates[a.CandidateProfileID].JobsApplied, a)
+		return nil
 	}
+
 	return fmt.Errorf("Cannot add Application to this candidate")
 }
 
@@ -94,20 +91,17 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	}
 
 	//Update Candidate
-	for i, can := range candidates {
-		if c.ID == can.ID {
-			//Check if tags are on the update payload
-			if c.Tags != nil {
-				//Validate if tag exist to add/reuse
-				c.Tags = ValidateTags(c.Tags)
-			}
-			//Removes the possibility of editing the JobsApplied when updating candidate
-			c.JobsApplied = candidates[i].JobsApplied
-
-			//Updates candidate
-			candidates[i] = &c
-			return c, nil
+	if _, found := candidates[c.ID]; found {
+		if c.Tags != nil {
+			//Validate if tag exist to add/reuse
+			c.Tags = ValidateTags(c.Tags)
 		}
+		//Removes the possibility of editing the JobsApplied when updating candidate
+		c.JobsApplied = candidates[c.ID].JobsApplied
+
+		//Updates candidate
+		candidates[c.ID] = &c
+		return c, nil
 	}
 
 	//Return candidate not found
@@ -146,30 +140,27 @@ func checkRequiredFields(c Candidate) (bool, string) {
 }
 
 func RemoveApplicationFromCandidate(a Application) error {
-	for i, can := range candidates {
-		if can.ID == a.CandidateProfileID {
-			for j, app := range can.JobsApplied {
-				if app.ID == a.ID {
-					candidates[i].JobsApplied = append(candidates[i].JobsApplied[:j], candidates[i].JobsApplied[j+1:]...)
-					return nil
-				}
+	if _, found := candidates[a.CandidateProfileID]; found {
+		for i, app := range candidates[a.CandidateProfileID].JobsApplied {
+			if app.ID == a.ID {
+				candidates[a.CandidateProfileID].JobsApplied = append(candidates[a.CandidateProfileID].JobsApplied[:i], candidates[a.CandidateProfileID].JobsApplied[i+1:]...)
+				return nil
 			}
 		}
 	}
+
 	return fmt.Errorf("Cannot remove Application from Candidate")
 }
 
 func DeleteCandidate(id int) error {
-	for i, can := range candidates {
-		if can.ID == id {
-			for _, app := range can.JobsApplied {
-				//The delete application method will remove the application from Candidate and from JobRequisition (slower than specific method)
-				DeleteApplication(app.ID)
-			}
-			candidates = append(candidates[:i], candidates[i+1:]...)
-			return nil
+	if _, found := candidates[id]; found {
+		for _, app := range candidates[id].JobsApplied {
+			DeleteApplication(app.ID)
 		}
+		delete(candidates, id)
+		return nil
 	}
+
 	return fmt.Errorf("Candidate with id '%v' not found", id)
 }
 

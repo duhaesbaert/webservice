@@ -11,7 +11,7 @@ type Application struct {
 }
 
 var (
-	applications map[int]*Application
+	applications = make(map[int]*Application)
 	nextAppID    = 1
 )
 
