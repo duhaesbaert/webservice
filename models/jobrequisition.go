@@ -111,6 +111,7 @@ func RemoveApplicationFromJobReq(a Application) error {
 			}
 		}
 	}
+
 	return fmt.Errorf("Cound not remove Application ID '%v' from Job Requisition '%v'", a.ID, a.JobRequisitionID)
 }
 

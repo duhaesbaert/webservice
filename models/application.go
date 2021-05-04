@@ -38,27 +38,33 @@ func AddApplication(a Application) (Application, error) {
 	}
 
 	tf, err := IsJobReqPosted(a.JobRequisitionID)
-	if err == nil {
-		if !tf {
-			return Application{}, fmt.Errorf("Job Requisition is not posted")
-		}
-	} else {
+
+	//Job Requisition has not been found
+	if err != nil {
 		return Application{}, fmt.Errorf("Error getting Job Requisition posting")
+	}
+
+	//Candidates cannot apply to requisitions not posted
+	if !tf {
+		return Application{}, fmt.Errorf("Job Requisition is not posted")
 	}
 
 	a.ID = nextAppID
 
+	//Insert record from Applicant on Job Requisition object
 	err = AddApplicationToJobReq(a)
 	if err != nil {
 		return Application{}, err
 	}
 
+	//Insert applicant record in Candidate object
 	err = AddApplicationToCandidate(a)
 	if err != nil {
 		RemoveApplicationFromJobReq(a)
 		return Application{}, err
 	}
 
+	//Add application into application list
 	nextAppID++
 	applications = append(applications, &a)
 	return a, nil

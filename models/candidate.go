@@ -50,8 +50,9 @@ func AddCandidate(c Candidate) (Candidate, error) {
 		return Candidate{}, fmt.Errorf("A new candidate cannot have applied to jobs yet")
 	}
 
-	if c.FirstName == "" || c.LastName == "" || c.Email == "" {
-		return Candidate{}, fmt.Errorf("Mandatory fields should be provided upon candidate creation")
+	b, e := checkRequiredFields(c)
+	if b {
+		return Candidate{}, fmt.Errorf("Field: %v should be populated", e)
 	}
 
 	//Add new Candidate
@@ -87,8 +88,9 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 		c.CountryObj.Code = ""
 	}
 
-	if c.FirstName == "" || c.LastName == "" || c.Email == "" {
-		return Candidate{}, fmt.Errorf("All mandatory fields should be populated")
+	b, e := checkRequiredFields(c)
+	if b {
+		return Candidate{}, fmt.Errorf("Field: %v should be populated", e)
 	}
 
 	//Update Candidate
@@ -110,6 +112,37 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 
 	//Return candidate not found
 	return Candidate{}, fmt.Errorf("Candidate '%v' was not found", c.FirstName)
+}
+
+func checkRequiredFields(c Candidate) (bool, string) {
+	retBool := false
+	retString := ""
+
+	if c.FirstName == "" {
+		retString += "FirstName"
+		retBool = true
+	}
+
+	if c.LastName == "" {
+		if retBool {
+			retString += ", "
+		} else {
+			retBool = true
+		}
+		retString += "LastName"
+	}
+
+	if c.Email == "" {
+		if retBool {
+			retString += ", "
+		} else {
+			retBool = true
+		}
+
+		retString += "Email"
+	}
+
+	return retBool, retString
 }
 
 func RemoveApplicationFromCandidate(a Application) error {
