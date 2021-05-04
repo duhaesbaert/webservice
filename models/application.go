@@ -11,20 +11,19 @@ type Application struct {
 }
 
 var (
-	applications []*Application
+	applications map[int]*Application
 	nextAppID    = 1
 )
 
-func GetApplications() []*Application {
+func GetApplications() map[int]*Application {
 	return applications
 }
 
 func GetApplicationByID(id int) (Application, error) {
-	for _, a := range applications {
-		if id == a.ID {
-			return *a, nil
-		}
+	if a, found := applications[id]; found {
+		return *a, nil
 	}
+
 	return Application{}, fmt.Errorf("Application with id '%v' not found", id)
 }
 
@@ -66,7 +65,7 @@ func AddApplication(a Application) (Application, error) {
 
 	//Add application into application list
 	nextAppID++
-	applications = append(applications, &a)
+	applications[nextAppID] = &a
 	return a, nil
 }
 
@@ -86,21 +85,22 @@ func UpdateApplication(a Application) (Application, error) {
 */
 
 func DeleteApplication(id int) error {
-	for i, app := range applications {
-		if app.ID == id {
-			err := RemoveApplicationFromJobReq(*app)
-			if err != nil {
-				return fmt.Errorf("Could not remove Application from Job Requisition")
-			}
-
-			err = RemoveApplicationFromCandidate(*app)
-			if err != nil {
-				AddApplicationToJobReq(*app)
-				return fmt.Errorf("Could not remove Application from Candidate")
-			}
-			applications = append(applications[:i], applications[i+1:]...)
-			return nil
+	if app, found := applications[id]; found {
+		//Remove application from Job Requisition
+		err := RemoveApplicationFromJobReq(*app)
+		if err != nil {
+			return fmt.Errorf("Could not remove Application from Job Requisition")
 		}
+
+		//Remove application from Candidate
+		err = RemoveApplicationFromCandidate(*app)
+		if err != nil {
+			AddApplicationToJobReq(*app)
+			return fmt.Errorf("Could not remove Application from Candidate")
+		}
+
+		delete(applications, id)
+		return nil
 	}
 	return fmt.Errorf("Application with ID '%v' not found", id)
 }
@@ -108,12 +108,13 @@ func DeleteApplication(id int) error {
 func RemoveCandidateApplicationsByID(canID int) error {
 	for i, app := range applications {
 		if app.CandidateProfileID == canID {
+			//Remove the application from Job Requisition
 			err := RemoveApplicationFromJobReq(*app)
 			if err != nil {
 				return fmt.Errorf("Could not remove applications from Job Requisitions")
 			}
 
-			applications = append(applications[:i], applications[i+1:]...)
+			delete(applications, i)
 		}
 	}
 	return nil
