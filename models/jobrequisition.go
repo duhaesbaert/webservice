@@ -14,20 +14,19 @@ type JobRequisition struct {
 }
 
 var (
-	jobReqs   []*JobRequisition
-	nextJobID = 1
+	jobReqs		=	make(map[int]*JobRequisition)
+	nextJobID	=	1
 )
 
-func GetJobRequisitions() []*JobRequisition {
+func GetJobRequisitions() map[int]*JobRequisition {
 	return jobReqs
 }
 
 func GetJobRequisitionByID(id int) (JobRequisition, error) {
-	for _, jr := range jobReqs {
-		if id == jr.ID {
-			return *jr, nil
-		}
+	if jr, found := jobReqs[id]; found {
+		return *jr, nil
 	}
+
 	return JobRequisition{}, fmt.Errorf("Job Requisition with ID '%v' not found", id)
 }
 
@@ -60,8 +59,8 @@ func AddJobRequisition(jr JobRequisition) (JobRequisition, error) {
 
 	//Create Job Requisition
 	jr.ID = nextJobID
+	jobReqs[nextJobID] = &jr
 	nextJobID++
-	jobReqs = append(jobReqs, &jr)
 	return jr, nil
 }
 
@@ -79,11 +78,9 @@ func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
 	}
 
 	//Update Job Requisition
-	for i, j := range jobReqs {
-		if j.ID == jr.ID {
-			jobReqs[i] = &jr
-			return jr, nil
-		}
+	if _, found := jobReqs[jr.ID]; found {
+		jobReqs[jr.ID] = &jr
+		return jr, nil
 	}
 
 	//Return Job Req not found
@@ -111,19 +108,20 @@ func RemoveApplicationFromJobReq(a Application) error {
 			}
 		}
 	}
-
 	return fmt.Errorf("Cound not remove Application ID '%v' from Job Requisition '%v'", a.ID, a.JobRequisitionID)
 }
 
 func DeleteJobRequisition(id int) error {
-	for i, j := range jobReqs {
-		if id == j.ID {
-			for _, app := range j.Applicants {
-				RemoveApplicationFromCandidate(app)
+	if _, found := jobReqs[id]; found {
+		for _, app := range jobReqs[id].Applicants {
+			err := RemoveApplicationFromCandidate(app)
+			if err != nil {
+				return err
 			}
-			jobReqs = append(jobReqs[:i], jobReqs[i:]...)
-			return nil
 		}
+		
+		delete(jobReqs, id)
+		return nil
 	}
 	return fmt.Errorf("Job Requisition with ID '%v' not found", id)
 }
