@@ -178,3 +178,25 @@ func ValidateTags(cTags []Tag) ([]Tag) {
 	}
 	return cTags
 }
+
+func GetCandidatesWithCountry(c int) []Candidate{
+	ret := make([]Candidate,0)
+
+	for _, v := range GetCandidates() {
+		if v.CountryObj.ID == c {
+			ret = append(ret, *v)
+		}
+	}
+
+	return ret
+}
+
+func UpdateApplicationOnCandidates(a Application) {
+	for _, v := range GetCandidates() {
+		for _, vApp := range v.JobsApplied {
+			if vApp.ID == a.ID {
+				vApp = a
+			}
+		}
+	}
+}

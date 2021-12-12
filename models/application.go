@@ -72,12 +72,15 @@ func AddApplication(a Application) (Application, error) {
 	return a, nil
 }
 
-/*
 func UpdateApplication(a Application) (Application, error) {
 	if a.CandidateProfileID != 0 && a.JobRequisitionID != 0 {
 		for i, app := range applications {
 			if a.ID == app.ID {
 				applications[i] = &a
+
+				UpdateApplicationOnJobs(a)
+				UpdateApplicationOnCandidates(a)
+
 				return a, nil
 			}
 		}
@@ -85,7 +88,6 @@ func UpdateApplication(a Application) (Application, error) {
 	}
 	return Application{}, fmt.Errorf("Missing Job Requisition and/or Candidate")
 }
-*/
 
 func DeleteApplication(id int) error {
 	if app, found := applications[id]; found {

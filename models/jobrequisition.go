@@ -137,3 +137,25 @@ func IsJobReqPosted(id int) (bool, error) {
 
 	return jr.PostingStatus, nil
 }
+
+func GetRequisitionsWithCountry(c int) []JobRequisition {
+	ret := make([]JobRequisition, 0)
+
+	for _, v := range GetJobRequisitions() {
+		if v.JobReqCountry.ID == c {
+			ret = append(ret, *v)
+		}
+	}
+
+	return ret
+}
+
+func UpdateApplicationOnJobs(a Application) {
+	for _, v := range GetJobRequisitions() {
+		for _, vApp := range v.Applicants {
+			if vApp.ID == a.ID {
+				vApp = a
+			}
+		}
+	}
+}
