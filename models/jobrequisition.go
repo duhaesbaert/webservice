@@ -19,12 +19,6 @@ var (
 )
 
 func GetJobRequisitions() map[int]*JobRequisition {
-	//get the country object on the fly
-	//IMPORTANT: as this is a test application, this can be updated to have the Update on the country updating the values on this entity, since it will make the GET operations faster.
-	for i, _ := range jobReqs {
-		jobReqs[i].JobReqCountry, _ = GetCountryByID(jobReqs[i].JobReqCountry.ID)
-	}
-
 	return jobReqs
 }
 

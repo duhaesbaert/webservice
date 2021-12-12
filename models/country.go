@@ -49,7 +49,45 @@ func UpdateCountry(c Country) (Country, error) {
 		return c, nil
 	}
 
+	//Update Candidate with the new value of country
+	for _, v := range GetCandidatesWithCountry(c.ID) {
+		v.CountryObj = c
+		UpdateCandidate(v)
+	}
+
+	//Update Job Requisition with new value of country
+	for _, v := range GetRequisitionsWithCountry(c.ID) {
+		v.JobReqCountry = c
+		UpdateJobRequisition(v)
+	}
+
 	return Country{}, fmt.Errorf("Country to be updated not found")
+}
+
+//Returns a slice of candidates using the country id passed by parameter
+func GetCandidatesWithCountry(c int) []Candidate{
+	ret := make([]Candidate,0)
+
+	for _, v := range GetCandidates() {
+		if v.CountryObj.ID == c {
+			ret = append(ret, *v)
+		}
+	}
+
+	return ret
+}
+
+//Returns a slice of job requisitions using the country id passed by parameter
+func GetRequisitionsWithCountry(c int) []JobRequisition {
+	ret := make([]JobRequisition, 0)
+
+	for _, v := range GetJobRequisitions() {
+		if v.JobReqCountry.ID == c {
+			ret = append(ret, *v)
+		}
+	}
+
+	return ret
 }
 
 func RemoveCountryByID(id int) error {
