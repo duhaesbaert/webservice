@@ -154,7 +154,9 @@ func UpdateApplicationOnJobs(a Application) {
 	for _, v := range GetJobRequisitions() {
 		for _, vApp := range v.Applicants {
 			if vApp.ID == a.ID {
-				vApp = a
+				vApp.SalaryExpectation = a.SalaryExpectation
+				vApp.timeOfExperience = a.timeOfExperience
+				vApp.ApplicationSource = a.ApplicationSource
 			}
 		}
 	}
