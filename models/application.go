@@ -8,6 +8,9 @@ type Application struct {
 	ID                 int
 	CandidateProfileID int
 	JobRequisitionID   int
+	SalaryExpectation  string
+	ApplicationSource  string
+	timeOfExperience   int
 }
 
 var (

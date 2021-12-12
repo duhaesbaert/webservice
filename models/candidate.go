@@ -21,6 +21,10 @@ var (
 )
 
 func GetCandidates() map[int]*Candidate {
+	for i, _ := range candidates {
+		candidates[i].CountryObj, _ = GetCountryByID(candidates[i].CountryObj.ID)
+	}
+
 	return candidates
 }
 
