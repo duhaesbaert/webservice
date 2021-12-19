@@ -2,6 +2,10 @@ package models
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"webservice/db"
+
+	"context"
 )
 
 type Country struct {
@@ -16,6 +20,13 @@ var (
 )
 
 func GetCountries() map[int]*Country {
+	//client, err := db.OpenConnectionToMongo(context.TODO())
+	//if err != nil {
+		//return map[int]*Country{}
+	//}
+	//coll := client.Database("myFirstDatabase").Collection("Countries")
+	//cursor, err := coll.Find()
+
 	return countries
 }
 
@@ -40,6 +51,23 @@ func AddCountry(c Country) (Country, error) {
 	countries[nextCountryID] = &c
 	nextCountryID++
 
+	//Validate if able to connect to MongoDB
+	client, err := db.OpenConnectionToMongo()
+	if err != nil {
+		return Country{}, fmt.Errorf("Could not establish connection to MongoDB")
+	}
+
+	coll := client.Database("myFirstDatabase").Collection("Countries")
+	doc := bson.D{{"ID", c.ID}, {"Name", c.Name}, {"Code", c.Code}}
+
+	//Validate if able to insert information into MongoDB
+	_ , err = coll.InsertOne(context.TODO(), doc)
+	if err != nil {
+		return Country{}, fmt.Errorf("Could not insert Country provided")
+	}
+
+	defer db.CloseConnectionToMongo(client)
+
 	return c, nil
 }
 
@@ -53,6 +81,7 @@ func UpdateCountry(c Country) (Country, error) {
 	for _, v := range GetCandidatesWithCountry(c.ID) {
 		v.CountryObj = c
 		UpdateCandidate(v)
+
 	}
 
 	//Update Job Requisition with new value of country
