@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-const uri = "mongodb+srv://DBADMIN:tr12ct24@cluster0.1exos.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+
 
 //Return true if successful to connect to Mongo DB.
 func OpenConnectionToMongo() bool	{
