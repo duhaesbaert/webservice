@@ -44,12 +44,7 @@ func GetCountries() []Country {
 
 	var listCountries []Country
 	for _, v := range results {
-		//turn the bson object into a byte array
-		bsonBytes, _ := bson.Marshal(v)
-
-		var c Country
-		//deconvert the byarray into a struct object
-		bson.Unmarshal(bsonBytes, &c)
+		c := bsonToCountry(v)
 
 		//add object into hashmap
 		listCountries = append(listCountries, c)
@@ -60,12 +55,39 @@ func GetCountries() []Country {
 }
 
 func GetCountryByID(id int) (Country, error) {
+	client, err := db.OpenConnectionToMongo()
+
+	if err != nil {
+		return Country{}, nil
+	}
+
+	filter := bson.D{
+		{"$and",
+			bson.A{
+				bson.D{{"ID", id}},
+			},
+		},
+	}
+	projection := bson.D{{"ID",1},{"Name", 1},{"Code", 1}}
+	opts := options.FindOne().SetProjection(projection)
+
+	coll := client.Database(db.GetDatabaseName()).Collection("Countries")
+
+	var result bson.D
+	coll.FindOne(context.TODO(),filter,opts).Decode(&result)
+
+	c := bsonToCountry(result)
+
+	if c.Name != "" {
+		return c, nil
+	}
+
+	return Country{}, fmt.Errorf("Country with ID '%v' not found", id)
 
 	//Old Implementation with values persisted in memory
 	//if _, found := countries[id]; found {
 	//	return *countries[id], nil
 	//}
-	return Country{}, fmt.Errorf("Country with ID '%v' not found", id)
 }
 
 func AddCountry(c Country) (Country, error) {
@@ -148,4 +170,14 @@ func AlreadyExistByCode(code string) bool {
 		}
 	}
 	return false
+}
+
+func bsonToCountry(v bson.D) Country {
+	bsonBytes, _ := bson.Marshal(v)
+
+	var c Country
+	//deconvert the byarray into a struct object
+	bson.Unmarshal(bsonBytes, &c)
+
+	return c
 }
