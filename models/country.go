@@ -18,10 +18,9 @@ type Country struct {
 var (
 	countries = make(map[int]*Country)
 	nextCountryID = updateCountriesInMemory()
-	currentCollection = "Countries"
 )
 
-//In Memory: returns the complete list of countries that has been.
+//In Memory: Returns the complete list of countries that has been.
 //Returns a hashmap containing the list of countries
 func GetCountries() map[int]*Country {
 	return countries
@@ -94,7 +93,7 @@ func AddCountry(c Country) (Country, error) {
 	coll := client.Database("myFirstDatabase").Collection("Countries")
 	doc := bson.D{{"ID", c.ID}, {"Name", c.Name}, {"Code", c.Code}}
 
-	//Validate if able to insert information into MongoDB
+	//Insert information into MongoDB
 	_ , err = coll.InsertOne(context.TODO(), doc)
 	if err != nil {
 		return Country{}, fmt.Errorf("Could not insert Country provided")
@@ -120,7 +119,7 @@ func UpdateCountry(c Country) (Country, error) {
 		}
 
 		//create parameters for updating the values of the country
-		coll := client.Database(db.GetDatabaseName()).Collection(currentCollection)
+		coll := client.Database(db.GetDatabaseName()).Collection("Countries")
 		filter := bson.D{{"ID", c.ID}}
 		update := bson.D{{"$set",bson.D{{"Name", c.Name},{"Code", c.Code}}}}
 
@@ -164,7 +163,7 @@ func RemoveCountryByID(id int) error {
 		}
 
 		//create parameters for updating the values of the country
-		coll := client.Database(db.GetDatabaseName()).Collection(currentCollection)
+		coll := client.Database(db.GetDatabaseName()).Collection("Countries")
 		filter := bson.D{{"ID", id}}
 
 		//Execute deletion on the database
@@ -207,6 +206,7 @@ func AlreadyExistByCode(code string) bool {
 }
 
 //Updates the hashmap containing all the countries to work with them in memory.
+//Return the next ID to be added into the Database
 func updateCountriesInMemory() int {
 	client, err := db.OpenConnectionToMongo()
 
