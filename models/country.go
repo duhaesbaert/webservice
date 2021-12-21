@@ -157,8 +157,13 @@ func RemoveCountryByID(id int) error {
 //Validate if the country with given ID already exists on the list
 //Returns true when country exist, and false when it doesn't
 func AlreadyExistById(id int) bool {
-	_, found := countries[id]
-	return found
+	_, err := GetCountryByID(id)
+
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 //Validate if the country already exists on the list
