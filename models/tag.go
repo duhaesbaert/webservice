@@ -65,7 +65,7 @@ func AddTag(t Tag) (Tag, error) {
 
 
 	coll := client.Database(db.GetDatabaseName()).Collection("Tags")
-	doc := bson.D{{"ID", t.ID},{"Label", t.Label}}
+	doc := bson.D{{"ID", nextTagID},{"Label", t.Label}}
 
 	//Insert information into Mongo DB
 	_, err = coll.InsertOne(context.TODO(), doc)
@@ -100,7 +100,9 @@ func updateTagsInMemory() int {
 	}
 
 	filter := bson.D{}
-	projection := bson.D{{"ID", 1}, {"Label" ,1}}
+	projection := bson.D{
+		{"ID", 1},
+		{"Label" ,1}}
 	opts := options.Find().SetProjection(projection)
 
 	coll := client.Database(db.GetDatabaseName()).Collection("Tags")
@@ -115,9 +117,11 @@ func updateTagsInMemory() int {
 	defer db.CloseConnectionToMongo(client)
 
 	biggestId := 1
+	tags = make([]*Tag,0)
 	for _, v := range results {
 		t := bsonToTag(v)
-		tags[t.ID] = &t
+		tags = append(tags, &t)
+
 		if t.ID > biggestId {
 			biggestId = t.ID
 		}

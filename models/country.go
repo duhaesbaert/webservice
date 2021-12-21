@@ -22,8 +22,13 @@ var (
 
 //In Memory: Returns the complete list of countries that has been.
 //Returns a hashmap containing the list of countries
-func GetCountries() map[int]*Country {
-	return countries
+func GetCountries() []*Country {
+	countryArr := make([]*Country,0)
+	for _, v := range countries {
+		countryArr = append(countryArr, v)
+	}
+	return countryArr
+	//return countries
 }
 
 //In Memory: Searches for a specific country on the hashmap.
@@ -80,10 +85,6 @@ func AddCountry(c Country) (Country, error) {
 		return Country{}, fmt.Errorf("Country with CODE '%v' already exists", c.Code)
 	}
 
-	c.ID = nextCountryID
-	countries[nextCountryID] = &c
-	nextCountryID++
-
 	//Validate if able to connect to MongoDB
 	client, err := db.OpenConnectionToMongo()
 	if err != nil {
@@ -91,7 +92,10 @@ func AddCountry(c Country) (Country, error) {
 	}
 
 	coll := client.Database("myFirstDatabase").Collection("Countries")
-	doc := bson.D{{"ID", c.ID}, {"Name", c.Name}, {"Code", c.Code}}
+	doc := bson.D{
+		{"ID", nextCountryID},
+		{"Name", c.Name},
+		{"Code", c.Code}}
 
 	//Insert information into MongoDB
 	_ , err = coll.InsertOne(context.TODO(), doc)
@@ -101,6 +105,7 @@ func AddCountry(c Country) (Country, error) {
 
 	defer db.CloseConnectionToMongo(client)
 
+	c.ID = nextCountryID
 	updateCountriesInMemory()
 
 	return c, nil
@@ -215,7 +220,10 @@ func updateCountriesInMemory() int {
 	}
 
 	filter := bson.D{}
-	projection := bson.D{{"ID",1},{"Name", 1},{"Code", 1}}
+	projection := bson.D{
+		{"ID",1},
+		{"Name", 1},
+		{"Code", 1}}
 	opts := options.Find().SetProjection(projection)
 
 	coll := client.Database(db.GetDatabaseName()).Collection("Countries")
@@ -230,10 +238,12 @@ func updateCountriesInMemory() int {
 	defer db.CloseConnectionToMongo(client)
 
 	biggestId := 1
+	countries = make(map[int]*Country)
 	for _, v := range results {
 		c := bsonToCountry(v)
-		//add object into hashmap
+
 		countries[c.ID] = &c
+
 		if c.ID > biggestId{
 			biggestId = c.ID
 		}
