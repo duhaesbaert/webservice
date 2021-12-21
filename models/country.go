@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"webservice/db"
 
 	"context"
@@ -19,22 +20,51 @@ var (
 	nextCountryID = 1
 )
 
-func GetCountries() map[int]*Country {
-	//client, err := db.OpenConnectionToMongo(context.TODO())
-	//if err != nil {
-		//return map[int]*Country{}
-	//}
-	//coll := client.Database("myFirstDatabase").Collection("Countries")
-	//cursor, err := coll.Find()
+func GetCountries() []Country {
+	client, err := db.OpenConnectionToMongo()
 
-	return countries
+	if err != nil {
+		return []Country{}
+	}
+
+	filter := bson.D{}
+	projection := bson.D{{"ID",1},{"Name", 1},{"Code", 1}}
+	opts := options.Find().SetProjection(projection)
+
+	coll := client.Database(db.GetDatabaseName()).Collection("Countries")
+	cursor, err := coll.Find(context.TODO(), filter, opts)
+
+	var results []bson.D
+
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+
+	defer db.CloseConnectionToMongo(client)
+
+	var listCountries []Country
+	for _, v := range results {
+		//turn the bson object into a byte array
+		bsonBytes, _ := bson.Marshal(v)
+
+		var c Country
+		//deconvert the byarray into a struct object
+		bson.Unmarshal(bsonBytes, &c)
+
+		//add object into hashmap
+		listCountries = append(listCountries, c)
+		//countries[i] = &c
+	}
+
+	return listCountries
 }
 
 func GetCountryByID(id int) (Country, error) {
-	if _, found := countries[id]; found {
-		return *countries[id], nil
-	}
 
+	//Old Implementation with values persisted in memory
+	//if _, found := countries[id]; found {
+	//	return *countries[id], nil
+	//}
 	return Country{}, fmt.Errorf("Country with ID '%v' not found", id)
 }
 
@@ -47,9 +77,9 @@ func AddCountry(c Country) (Country, error) {
 		return Country{}, fmt.Errorf("Country with CODE '%v' already exists", c.Code)
 	}
 
-	c.ID = nextCountryID
-	countries[nextCountryID] = &c
-	nextCountryID++
+	//c.ID = nextCountryID
+	//countries[nextCountryID] = &c
+	//nextCountryID++
 
 	//Validate if able to connect to MongoDB
 	client, err := db.OpenConnectionToMongo()

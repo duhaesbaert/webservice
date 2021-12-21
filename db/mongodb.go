@@ -7,7 +7,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const uri = ""
 
+func GetDatabaseName () string {
+	return "myFirstDatabase"
+}
 
 //Return true if successful to connect to Mongo DB.
 func OpenConnectionToMongo() (*mongo.Client, error) {
