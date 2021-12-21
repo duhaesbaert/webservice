@@ -24,8 +24,8 @@ var (
 	nextCanID  = updateCandidatesInMemory()
 )
 
-//In Memory: Returns the complete list of candidates that has been.
-//Returns a hashmap containing the list of candidates
+//In Memory: Returns the complete list of Candidate that has been.
+//Returns a hashmap containing the list of Candidate
 func GetCandidates() []*Candidate {
 	candArr := make([]*Candidate, 0)
 
@@ -36,8 +36,8 @@ func GetCandidates() []*Candidate {
 	//return candidates
 }
 
-//In Memory: Searches for a specific candidate on the hashmap.
-//Returns a candidate object and an error in case it was not possible to find the record
+//In Memory: Searches for a specific Candidate on the hashmap.
+//Returns a Candidate object and an error in case it was not possible to find the record
 func GetCandidateByID(id int) (Candidate, error) {
 	if c, found := candidates[id]; found {
 		return *c, nil
@@ -45,8 +45,8 @@ func GetCandidateByID(id int) (Candidate, error) {
 	return Candidate{}, fmt.Errorf("Candidate with ID '%v' not found", id)
 }
 
-//In DB: Creates a new country record to the collection and updates the candidates in memory.
-//Returns a country object and an error in case it was not possible to create the record
+//In DB: Creates a new country record to the collection and updates the Candidate in memory.
+//Returns a Candidate object and an error in case it was not possible to create the record
 func AddCandidate(c Candidate) (Candidate, error) {
 	//Validation
 	if c.ID != 0 {
@@ -105,8 +105,8 @@ func AddCandidate(c Candidate) (Candidate, error) {
 	return c, nil
 }
 
-//In DB: Updates a candidate record on the collection and updates the candidates in memory.
-//Returns a candidate object and an error in case it was not possible to update the record
+//In DB: Updates a Candidate record on the collection and updates the Candidate in memory.
+//Returns a Candidate object and an error in case it was not possible to update the record
 func UpdateCandidate(c Candidate) (Candidate, error) {
 	//Validation section
 	if !AlreadyExistById(c.CountryObj.ID) {
@@ -160,7 +160,7 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 	return Candidate{}, fmt.Errorf("Candidate '%v' was not found", c.FirstName)
 }
 
-//In DB: Removes a candidate record from the collection and updates the candidates in memory.
+//In DB: Removes a Candidate record from the collection and updates the Candidate in memory.
 //Returns error if failed to complete the deletion on the DB
 func DeleteCandidate(id int) error {
 	if _, found := candidates[id]; found {
