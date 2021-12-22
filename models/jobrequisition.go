@@ -131,12 +131,12 @@ func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
 
 		coll := client.Database(db.GetDatabaseName()).Collection("Requisitions")
 		filter := bson.D{{"ID", jr.ID}}
-		update := bson.D{
+		update := bson.D{{"$set", bson.D{
 			{"Title", jr.Title},
 			{"JobDescription", jr.JobDescription},
 			{"PostingStatus", jr.PostingStatus},
 			{"JobReqCountry", jr.JobReqCountry},
-			{"Applicants", jr.Applicants}}
+			{"Applicants", jr.Applicants}}}}
 
 		if _, err := coll.UpdateOne(context.TODO(), filter, update); err != nil {
 			return JobRequisition{}, fmt.Errorf("Could not update  Requisition provided")
@@ -152,6 +152,8 @@ func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
 	return JobRequisition{}, fmt.Errorf("Job Requisition with ID '%v' not found", jr.ID)
 }
 
+//In DB: Removes a JobRequisition record from the collection and updates the JobRequisition in memory.
+//Returns error if failed to complete the deletion on the DB
 func DeleteJobRequisition(id int) error {
 	if _, found := jobReqs[id]; found {
 		for _, app := range jobReqs[id].Applicants {
@@ -161,7 +163,21 @@ func DeleteJobRequisition(id int) error {
 			}
 		}
 		
-		delete(jobReqs, id)
+		client, err := db.OpenConnectionToMongo()
+		if err != nil {
+			return fmt.Errorf("Could not connect to Database")
+		}
+
+		coll := client.Database(db.GetDatabaseName()).Collection("Requisitions")
+		filter := bson.D{{"ID", id}}
+
+		if _, err = coll.DeleteOne(context.TODO(), filter); err != nil {
+			return fmt.Errorf("Could not delete requisition wiht ID provided")
+		}
+
+		defer db.CloseConnectionToMongo(client)
+
+		updateJobRequisitionInMemory()
 		return nil
 	}
 	return fmt.Errorf("Job Requisition with ID '%v' not found", id)
