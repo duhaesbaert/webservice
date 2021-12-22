@@ -45,7 +45,7 @@ func GetCandidateByID(id int) (Candidate, error) {
 	return Candidate{}, fmt.Errorf("Candidate with ID '%v' not found", id)
 }
 
-//In DB: Creates a new country record to the collection and updates the Candidate in memory.
+//In DB: Creates a new Candidate record to the collection and updates the Candidate in memory.
 //Returns a Candidate object and an error in case it was not possible to create the record
 func AddCandidate(c Candidate) (Candidate, error) {
 	//Validation
