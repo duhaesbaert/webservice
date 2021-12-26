@@ -28,45 +28,11 @@ func GetCountries() []*Country {
 		countryArr = append(countryArr, v)
 	}
 	return countryArr
-	//return countries
 }
 
 //In Memory: Searches for a specific country on the hashmap.
 //Returns a country object and an error in case it was not possible to find the record
 func GetCountryByID(id int) (Country, error) {
-	//Implementation consulting the databasse.
-	//This was replaced by persisting the list in memory and then updating the list when values on the database are updated.
-	//Possible only because all insert and updates done on the database pass go this class
-	/*client, err := db.OpenConnectionToMongo()
-
-	if err != nil {
-		return Country{}, nil
-	}
-
-	filter := bson.D{
-		{"$and",
-			bson.A{
-				bson.D{{"ID", id}},
-			},
-		},
-	}
-	projection := bson.D{{"ID",1},{"Name", 1},{"Code", 1}}
-	opts := options.FindOne().SetProjection(projection)
-
-	coll := client.Database(db.GetDatabaseName()).Collection("Countries")
-
-	var result bson.D
-	coll.FindOne(context.TODO(),filter,opts).Decode(&result)
-
-	c := bsonToCountry(result)
-
-	if c.Name != "" {
-		return c, nil
-	}
-
-
-	*/
-
 	if _, found := countries[id]; found {
 		return *countries[id], nil
 	}

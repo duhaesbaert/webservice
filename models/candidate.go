@@ -15,7 +15,7 @@ type Candidate struct {
 	Email       string
 	Address     string
 	Tags		[]Tag
-	countryId	int
+	cCountryId 	int
 	CountryObj  Country
 	JobsApplied []Application
 }
@@ -201,19 +201,6 @@ func DeleteCandidate(id int) error {
 	}
 
 	return fmt.Errorf("Candidate with id '%v' not found", id)
-}
-
-func RemoveApplicationFromCandidate(a Application) error {
-	if _, found := candidates[a.CandidateProfileID]; found {
-		for i, app := range candidates[a.CandidateProfileID].JobsApplied {
-			if app.ID == a.ID {
-				candidates[a.CandidateProfileID].JobsApplied = append(candidates[a.CandidateProfileID].JobsApplied[:i], candidates[a.CandidateProfileID].JobsApplied[i+1:]...)
-				return nil
-			}
-		}
-	}
-
-	return fmt.Errorf("Cannot remove Application from Candidate")
 }
 
 //Verify if all the fields on the Candidate object that are required for teh entity are populated.

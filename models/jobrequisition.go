@@ -9,12 +9,13 @@ import (
 )
 
 type JobRequisition struct {
-	ID             int
-	Title          string
-	JobDescription string
-	PostingStatus  bool
-	JobReqCountry  Country
-	Applicants     []Application
+	ID				int
+	Title			string
+	JobDescription	string
+	PostingStatus	bool
+	jrCountryId		int
+	JobReqCountry	Country
+	Applicants		[]Application
 }
 
 var (
@@ -156,13 +157,8 @@ func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
 //Returns error if failed to complete the deletion on the DB
 func DeleteJobRequisition(id int) error {
 	if _, found := jobReqs[id]; found {
-		for _, app := range jobReqs[id].Applicants {
-			err := RemoveApplicationFromCandidate(app)
-			if err != nil {
-				return err
-			}
-		}
-		
+		DeleteApplicationFromJobReq(id)
+
 		client, err := db.OpenConnectionToMongo()
 		if err != nil {
 			return fmt.Errorf("Could not connect to Database")
@@ -183,30 +179,8 @@ func DeleteJobRequisition(id int) error {
 	return fmt.Errorf("Job Requisition with ID '%v' not found", id)
 }
 
-func AddApplicationToJobReq(a Application) error {
-	for i, j := range jobReqs {
-		if a.JobRequisitionID == j.ID {
-			jobReqs[i].Applicants = append(jobReqs[i].Applicants, a)
-			return nil
-		}
-	}
-	return fmt.Errorf("Cannot add Application to Job Requisition")
-}
-
-func RemoveApplicationFromJobReq(a Application) error {
-	for i, j := range jobReqs {
-		if a.JobRequisitionID == j.ID {
-			for k, apps := range j.Applicants {
-				if apps.ID == a.ID {
-					jobReqs[i].Applicants = append(jobReqs[i].Applicants[:k], jobReqs[i].Applicants[k+1:]...)
-					return nil
-				}
-			}
-		}
-	}
-	return fmt.Errorf("Cound not remove Application ID '%v' from Job Requisition '%v'", a.ID, a.JobRequisitionID)
-}
-
+//In Memory: Verify if the JobRequisition id provided is referring to a posted job req.
+//Returns a boolean value: True if posted, False if not. Returns an error also in case it does not find the req
 func IsJobReqPosted(id int) (bool, error) {
 	jr, err := GetJobRequisitionByID(id)
 	if err != nil {
@@ -226,18 +200,6 @@ func GetRequisitionsWithCountry(c int) []JobRequisition {
 	}
 
 	return ret
-}
-
-func UpdateApplicationOnJobs(a Application) {
-	for _, v := range GetJobRequisitions() {
-		for _, vApp := range v.Applicants {
-			if vApp.ID == a.ID {
-				vApp.SalaryExpectation = a.SalaryExpectation
-				vApp.TimeOfExperience = a.TimeOfExperience
-				vApp.ApplicationSource = a.ApplicationSource
-			}
-		}
-	}
 }
 
 //Updates the hashmap containing all the JobRequisition to work with them in memory.
@@ -272,6 +234,9 @@ func updateJobRequisitionInMemory() int {
 	jobReqs = make(map[int]*JobRequisition)
 	for _, v := range results {
 		jr := bsonToJobRequisition(v)
+
+		//Returns all applications of this JobRequisition
+		jr.Applicants = GetApplicationsOfJobReq(jr.ID)
 
 		jobReqs[jr.ID] = &jr
 		if jr.ID > biggestId {

@@ -43,13 +43,27 @@ func GetApplicationByID(id int) (Application, error) {
 	return Application{}, fmt.Errorf("Application with id '%v' not found", id)
 }
 
-//In Memory: Searches for Application that belon to the candidate with id received as parameter on the hashmap.
+//In Memory: Searches for Application that belong to the candidate with id received as parameter on the hashmap.
 //Returns a list of Application object.
 func GetApplicationsOfCandidate(id int) []Application {
 	appArr := make([]Application,0)
 
 	for _, v := range applications {
 		if v.CandidateProfileID == id {
+			appArr = append(appArr, *v)
+		}
+	}
+
+	return appArr
+}
+
+//In Memory: Searches for Application done to the JobRequisition with id received as parameter on the hashmap.
+//Returns a list of Application object.
+func GetApplicationsOfJobReq(id int) []Application {
+	appArr := make([]Application,0)
+
+	for _, v := range applications {
+		if v.JobRequisitionID == id {
 			appArr = append(appArr, *v)
 		}
 	}
@@ -102,13 +116,9 @@ func AddApplication(a Application) (Application, error) {
 
 	defer db.CloseConnectionToMongo(client)
 
-	//job req
-	err = AddApplicationToJobReq(a)
-	if err != nil {
-		return Application{}, err
-	}
-
 	updateApplicantsInMemory()
+	updateJobRequisitionInMemory()
+	updateCandidatesInMemory()
 	return a, nil
 }
 
@@ -142,8 +152,7 @@ func UpdateApplication(a Application) (Application, error) {
 
 		updateApplicantsInMemory()
 		updateCandidatesInMemory()
-		//job req
-		UpdateApplicationOnJobs(a)
+		updateJobRequisitionInMemory()
 		return a, nil
 	} else {
 		return Application{}, fmt.Errorf("Application with ID '%v' not found", a.ID)
@@ -154,16 +163,6 @@ func UpdateApplication(a Application) (Application, error) {
 //Returns error if failed to complete the deletion on the DB
 func DeleteApplication(id int) error {
 	if _, found := applications[id]; found {
-
-		/*
-		//Remove application from Job Requisition
-		err := RemoveApplicationFromJobReq(*app)
-		if err != nil {
-			return fmt.Errorf("Could not remove Application from Job Requisition")
-		}
-
-		*/
-
 		client, err := db.OpenConnectionToMongo()
 
 		if err != nil {
@@ -180,13 +179,14 @@ func DeleteApplication(id int) error {
 		defer db.CloseConnectionToMongo(client)
 
 		updateApplicantsInMemory()
+		updateJobRequisitionInMemory()
+		updateCandidatesInMemory()
 		return nil
 	}
 	return fmt.Errorf("Application with ID '%v' not found", id)
 }
 
 //In DB: Removes all Application from a specified Candidate.
-//Returns an error in case it was not possible to remove
 func DeleteApplicationFromCandidate(id int) {
 	for _, v := range applications {
 		if v.CandidateProfileID == id {
@@ -195,20 +195,13 @@ func DeleteApplicationFromCandidate(id int) {
 	}
 }
 
-//job req
-func RemoveCandidateApplicationsByID(canID int) error {
-	for i, app := range applications {
-		if app.CandidateProfileID == canID {
-			//Remove the application from Job Requisition
-			err := RemoveApplicationFromJobReq(*app)
-			if err != nil {
-				return fmt.Errorf("Could not remove applications from Job Requisitions")
-			}
-
-			delete(applications, i)
+//In DB: Removes all Application from a specified JobRequisition.
+func DeleteApplicationFromJobReq(id int) {
+	for _, v := range applications {
+		if v.JobRequisitionID == id {
+			DeleteApplication(v.ID)
 		}
 	}
-	return nil
 }
 
 //Updates the hashmap containing all the Application to work with them in memory.
