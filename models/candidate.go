@@ -15,7 +15,7 @@ type Candidate struct {
 	Email       string
 	Address     string
 	Tags		[]Tag
-	cCountryId 	int
+	CanCountryId 	int
 	CountryObj  Country
 	JobsApplied []Application
 }
@@ -52,7 +52,7 @@ func GetCandidatesWithCountry(c int) []Candidate{
 	ret := make([]Candidate,0)
 
 	for _, v := range GetCandidates() {
-		if v.CountryObj.ID == c {
+		if v.CanCountryId == c {
 			ret = append(ret, *v)
 		}
 	}
@@ -104,8 +104,7 @@ func AddCandidate(c Candidate) (Candidate, error) {
 		{"Email", c.Email},
 		{"Address", c.Address},
 		{"Tags", c.Tags},
-		{"CountryObj", c.CountryObj},
-		{"JobsApplied", c.JobsApplied}}
+		{"CanCountryId", c.CanCountryId}}
 
 	_, err = coll.InsertOne(context.TODO(), doc)
 	if err != nil {
@@ -117,7 +116,7 @@ func AddCandidate(c Candidate) (Candidate, error) {
 	c.ID = nextCanID
 	updateCandidatesInMemory()
 
-	return c, nil
+	return GetCandidateByID(c.ID)
 }
 
 //In DB: Updates a Candidate record on the collection and updates the Candidate in memory.
@@ -158,8 +157,7 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 			{"Email", c.Email},
 			{"Address", c.Address},
 			{"Tags", c.Tags},
-			{"CountryObj", c.CountryObj},
-			{"JobsApplied", c.JobsApplied}}}}
+			{"CanCountryId", c.CanCountryId}}}}
 
 		if _, err = coll.UpdateOne(context.TODO(), filter, update); err != nil {
 			return Candidate{}, fmt.Errorf("Could not update candidate provided")
@@ -168,7 +166,7 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 		defer db.CloseConnectionToMongo(client)
 
 		updateCandidatesInMemory()
-		return c, nil
+		return GetCandidateByID(c.ID)
 	}
 
 	//Return candidate not found
@@ -270,7 +268,7 @@ func updateCandidatesInMemory() int {
 		{"Email", 1},
 		{"Address", 1},
 		{"Tags", 1},
-		{"CountryObj", 1}}
+		{"CanCountryId", 1}}
 	opts := options.Find().SetProjection(projection)
 
 	coll := client.Database(db.GetDatabaseName()).Collection("Candidates")
@@ -288,6 +286,7 @@ func updateCandidatesInMemory() int {
 	for _, v := range results {
 		c := bsonToCandidate(v)
 
+		c.CountryObj, _ = GetCountryByID(c.CanCountryId)
 		c.JobsApplied = GetApplicationsOfCandidate(c.ID)
 
 		candidates[c.ID] = &c

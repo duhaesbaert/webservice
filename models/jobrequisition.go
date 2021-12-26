@@ -13,7 +13,7 @@ type JobRequisition struct {
 	Title			string
 	JobDescription	string
 	PostingStatus	bool
-	jrCountryId		int
+	JrCountryId		int
 	JobReqCountry	Country
 	Applicants		[]Application
 }
@@ -67,14 +67,6 @@ func AddJobRequisition(jr JobRequisition) (JobRequisition, error) {
 	if jr.ID != 0 {
 		return JobRequisition{}, fmt.Errorf("Job Requisition must not contain ID upon creation")
 	}
-
-	if !AlreadyExistById(jr.JobReqCountry.ID) {
-		return JobRequisition{}, fmt.Errorf("Country inserted for Job Requisition does not exist")
-	} else if jr.JobReqCountry.ID == 0 && (jr.JobReqCountry.Name != "" || jr.JobReqCountry.Code != "") {
-		jr.JobReqCountry.Name = ""
-		jr.JobReqCountry.Code = ""
-	}
-
 	if jr.Title == "" || jr.JobDescription == "" {
 		return JobRequisition{}, fmt.Errorf("Mandatory fields should be populated upon creating Job Requisition")
 	}
@@ -93,8 +85,7 @@ func AddJobRequisition(jr JobRequisition) (JobRequisition, error) {
 		{"Title", jr.Title},
 		{"JobDescription", jr.JobDescription},
 		{"PostingStatus", jr.PostingStatus},
-		{"JobReqCountry", jr.JobReqCountry},
-		{"Applicants", jr.Applicants}}
+		{"JrCountryId", jr.JrCountryId}}
 
 	if _, err = coll.InsertOne(context.TODO(), doc); err != nil {
 		return JobRequisition{}, fmt.Errorf("Could not insert Job Requisition provided")
@@ -103,23 +94,14 @@ func AddJobRequisition(jr JobRequisition) (JobRequisition, error) {
 	defer db.CloseConnectionToMongo(client)
 
 	updateJobRequisitionInMemory()
-
-	return jr, nil
+	return GetJobRequisitionByID(jr.ID)
 }
 
 //In DB: Updates a JobRequisition record on the collection and updates the JobRequisition in memory.
 //Returns a JobRequisition object and an error in case it was not possible to update the record
 func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
-	//Validation section
-	if !AlreadyExistById(jr.JobReqCountry.ID) {
-		return JobRequisition{}, fmt.Errorf("Country inserted for Job Requisition does not exist")
-	} else if jr.JobReqCountry.ID == 0 && (jr.JobReqCountry.Name != "" || jr.JobReqCountry.Code != "") {
-		jr.JobReqCountry.Name = ""
-		jr.JobReqCountry.Code = ""
-	}
-
 	if jr.Title == "" || jr.JobDescription == "" {
-		return JobRequisition{}, fmt.Errorf("All mandatory fields should be populated")
+		return JobRequisition{}, fmt.Errorf("Mandatory fields should be populated upon creating Job Requisition")
 	}
 
 	//Update Job Requisition
@@ -132,12 +114,12 @@ func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
 
 		coll := client.Database(db.GetDatabaseName()).Collection("Requisitions")
 		filter := bson.D{{"ID", jr.ID}}
+
 		update := bson.D{{"$set", bson.D{
 			{"Title", jr.Title},
 			{"JobDescription", jr.JobDescription},
 			{"PostingStatus", jr.PostingStatus},
-			{"JobReqCountry", jr.JobReqCountry},
-			{"Applicants", jr.Applicants}}}}
+			{"JrCountryId", jr.JrCountryId}}}}
 
 		if _, err := coll.UpdateOne(context.TODO(), filter, update); err != nil {
 			return JobRequisition{}, fmt.Errorf("Could not update  Requisition provided")
@@ -146,7 +128,7 @@ func UpdateJobRequisition(jr JobRequisition) (JobRequisition, error) {
 		defer db.CloseConnectionToMongo(client)
 
 		updateJobRequisitionInMemory()
-		return jr, nil
+		return GetJobRequisitionByID(jr.ID)
 	}
 
 	//Return Job Req not found
@@ -190,6 +172,8 @@ func IsJobReqPosted(id int) (bool, error) {
 	return jr.PostingStatus, nil
 }
 
+//In Memory: Searches for JobRequisition with Country.
+//Return a list of JobRequisition
 func GetRequisitionsWithCountry(c int) []JobRequisition {
 	ret := make([]JobRequisition, 0)
 
@@ -216,8 +200,7 @@ func updateJobRequisitionInMemory() int {
 		{"Title", 1},
 		{"JobDescription", 1},
 		{"PostingStatus", 1},
-		{"JobReqCountry", 1},
-		{"Applicants", 1}}
+		{"JrCountryId", 1}}
 	opts := options.Find().SetProjection(projection)
 
 	coll := client.Database(db.GetDatabaseName()).Collection("Requisitions")
@@ -234,6 +217,8 @@ func updateJobRequisitionInMemory() int {
 	jobReqs = make(map[int]*JobRequisition)
 	for _, v := range results {
 		jr := bsonToJobRequisition(v)
+
+		jr.JobReqCountry, err = GetCountryByID(jr.JrCountryId)
 
 		//Returns all applications of this JobRequisition
 		jr.Applicants = GetApplicationsOfJobReq(jr.ID)

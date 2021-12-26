@@ -73,7 +73,6 @@ func AddCountry(c Country) (Country, error) {
 
 	c.ID = nextCountryID
 	updateCountriesInMemory()
-
 	return c, nil
 }
 
@@ -102,20 +101,10 @@ func UpdateCountry(c Country) (Country, error) {
 
 		defer db.CloseConnectionToMongo(client)
 
-		//Update Candidate with the new value of country
-		for _, v := range GetCandidatesWithCountry(c.ID) {
-			v.CountryObj = c
-			UpdateCandidate(v)
-		}
-
-		//Update Job Requisition with new value of country
-		for _, v := range GetRequisitionsWithCountry(c.ID) {
-			v.JobReqCountry = c
-			UpdateJobRequisition(v)
-		}
-
 		//Update the list stored in memory
 		updateCountriesInMemory()
+		updateJobRequisitionInMemory()
+		updateCandidatesInMemory()
 		return c, nil
 	}
 
@@ -147,6 +136,8 @@ func RemoveCountryByID(id int) error {
 
 		//update the list stored in memory
 		updateCountriesInMemory()
+		updateJobRequisitionInMemory()
+		updateCandidatesInMemory()
 		return nil
 	}
 
