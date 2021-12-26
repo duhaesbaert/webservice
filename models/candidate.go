@@ -15,6 +15,7 @@ type Candidate struct {
 	Email       string
 	Address     string
 	Tags		[]Tag
+	countryId	int
 	CountryObj  Country
 	JobsApplied []Application
 }
@@ -24,7 +25,7 @@ var (
 	nextCanID  = updateCandidatesInMemory()
 )
 
-//In Memory: Returns the complete list of Candidate that has been.
+//In Memory: Returns the complete list of Candidate.
 //Returns a hashmap containing the list of Candidate
 func GetCandidates() []*Candidate {
 	candArr := make([]*Candidate, 0)
@@ -43,6 +44,20 @@ func GetCandidateByID(id int) (Candidate, error) {
 		return *c, nil
 	}
 	return Candidate{}, fmt.Errorf("Candidate with ID '%v' not found", id)
+}
+
+//In Memory: Returns a list of Candidate with country received as parameter.
+//Returns a slice of Candidate
+func GetCandidatesWithCountry(c int) []Candidate{
+	ret := make([]Candidate,0)
+
+	for _, v := range GetCandidates() {
+		if v.CountryObj.ID == c {
+			ret = append(ret, *v)
+		}
+	}
+
+	return ret
 }
 
 //In DB: Creates a new Candidate record to the collection and updates the Candidate in memory.
@@ -164,9 +179,8 @@ func UpdateCandidate(c Candidate) (Candidate, error) {
 //Returns error if failed to complete the deletion on the DB
 func DeleteCandidate(id int) error {
 	if _, found := candidates[id]; found {
-		for _, app := range candidates[id].JobsApplied {
-			DeleteApplication(app.ID)
-		}
+		//Remove the application record from Applications
+		DeleteApplicationFromCandidate(id)
 
 		client, err := db.OpenConnectionToMongo()
 		if err != nil {
@@ -189,15 +203,21 @@ func DeleteCandidate(id int) error {
 	return fmt.Errorf("Candidate with id '%v' not found", id)
 }
 
-func AddApplicationToCandidate(a Application) error {
+func RemoveApplicationFromCandidate(a Application) error {
 	if _, found := candidates[a.CandidateProfileID]; found {
-		candidates[a.CandidateProfileID].JobsApplied = append(candidates[a.CandidateProfileID].JobsApplied, a)
-		return nil
+		for i, app := range candidates[a.CandidateProfileID].JobsApplied {
+			if app.ID == a.ID {
+				candidates[a.CandidateProfileID].JobsApplied = append(candidates[a.CandidateProfileID].JobsApplied[:i], candidates[a.CandidateProfileID].JobsApplied[i+1:]...)
+				return nil
+			}
+		}
 	}
 
-	return fmt.Errorf("Cannot add Application to this candidate")
+	return fmt.Errorf("Cannot remove Application from Candidate")
 }
 
+//Verify if all the fields on the Candidate object that are required for teh entity are populated.
+//Returns a boolean value: True if populated, False if not populated.
 func checkRequiredFields(c Candidate) (bool, string) {
 	retBool := false
 	retString := ""
@@ -229,19 +249,9 @@ func checkRequiredFields(c Candidate) (bool, string) {
 	return retBool, retString
 }
 
-func RemoveApplicationFromCandidate(a Application) error {
-	if _, found := candidates[a.CandidateProfileID]; found {
-		for i, app := range candidates[a.CandidateProfileID].JobsApplied {
-			if app.ID == a.ID {
-				candidates[a.CandidateProfileID].JobsApplied = append(candidates[a.CandidateProfileID].JobsApplied[:i], candidates[a.CandidateProfileID].JobsApplied[i+1:]...)
-				return nil
-			}
-		}
-	}
-
-	return fmt.Errorf("Cannot remove Application from Candidate")
-}
-
+//Validate the tag added to the Candidate, to make sure the current tag doesn't already exist.
+//Tags are reused accross the system so it becomes searchable and reportable.
+//Returns the tag for confirmation.
 func ValidateTags(cTags []Tag) ([]Tag) {
 	for _, t := range cTags	{
 		b,id,_ := ExistTagByLabel(t.Label)
@@ -255,30 +265,6 @@ func ValidateTags(cTags []Tag) ([]Tag) {
 		}
 	}
 	return cTags
-}
-
-func GetCandidatesWithCountry(c int) []Candidate{
-	ret := make([]Candidate,0)
-
-	for _, v := range GetCandidates() {
-		if v.CountryObj.ID == c {
-			ret = append(ret, *v)
-		}
-	}
-
-	return ret
-}
-
-func UpdateApplicationOnCandidates(a Application) {
-	for _, v := range GetCandidates() {
-		for _, vApp := range v.JobsApplied {
-			if vApp.ID == a.ID {
-				vApp.SalaryExpectation = a.SalaryExpectation
-				vApp.TimeOfExperience = a.TimeOfExperience
-				vApp.ApplicationSource = a.ApplicationSource
-			}
-		}
-	}
 }
 
 //Updates the hashmap containing all the countries to work with them in memory.
@@ -297,8 +283,7 @@ func updateCandidatesInMemory() int {
 		{"Email", 1},
 		{"Address", 1},
 		{"Tags", 1},
-		{"CountryObj", 1},
-		{"JobsApplied", 1}}
+		{"CountryObj", 1}}
 	opts := options.Find().SetProjection(projection)
 
 	coll := client.Database(db.GetDatabaseName()).Collection("Candidates")
@@ -315,6 +300,8 @@ func updateCandidatesInMemory() int {
 	candidates = make(map[int]*Candidate)
 	for _, v := range results {
 		c := bsonToCandidate(v)
+
+		c.JobsApplied = GetApplicationsOfCandidate(c.ID)
 
 		candidates[c.ID] = &c
 		if c.ID > biggestId {
