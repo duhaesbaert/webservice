@@ -274,7 +274,7 @@ func UpdateApplicationOnCandidates(a Application) {
 		for _, vApp := range v.JobsApplied {
 			if vApp.ID == a.ID {
 				vApp.SalaryExpectation = a.SalaryExpectation
-				vApp.timeOfExperience = a.timeOfExperience
+				vApp.TimeOfExperience = a.TimeOfExperience
 				vApp.ApplicationSource = a.ApplicationSource
 			}
 		}

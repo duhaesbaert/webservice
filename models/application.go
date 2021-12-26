@@ -14,7 +14,7 @@ type Application struct {
 	JobRequisitionID   int
 	SalaryExpectation  string
 	ApplicationSource  string
-	timeOfExperience   int
+	TimeOfExperience   int
 }
 
 var (
@@ -80,7 +80,7 @@ func AddApplication(a Application) (Application, error) {
 		{"JobRequisitionID", a.JobRequisitionID},
 		{"SalaryExpectation", a.SalaryExpectation},
 		{"ApplicationSource", a.ApplicationSource},
-		{"timeOfExperience", a.timeOfExperience}}
+		{"TimeOfExperience", a.TimeOfExperience}}
 
 	if _, err = coll.InsertOne(context.TODO(), doc); err != nil {
 		return Application{}, fmt.Errorf("Could not insert application provided")
@@ -108,43 +108,47 @@ func AddApplication(a Application) (Application, error) {
 //In DB: Updates a Application record on the collection and updates the Application in memory.
 //Returns a Application object and an error in case it was not possible to update the record
 func UpdateApplication(a Application) (Application, error) {
-	if a.CandidateProfileID != 0 && a.JobRequisitionID != 0 {
-		for _, app := range applications {
-			if a.ID == app.ID {
-				client, err := db.OpenConnectionToMongo()
-				if err != nil {
-					return Application{}, fmt.Errorf("Could not establish connection to Database")
-				}
+	if a.CandidateProfileID == 0 || a.JobRequisitionID == 0{
+		return Application{}, fmt.Errorf("Missing Job Requisition ID and/or Candidate ID")
+	}
 
-				coll := client.Database(db.GetDatabaseName()).Collection("Applications")
-				filter := bson.D{{"ID", a.ID}}
-				update := bson.D{{"$set", bson.D{
-					{"CandidateProfileID", a.CandidateProfileID},
-					{"JobRequisitionID", a.JobRequisitionID},
-					{"SalaryExpectation", a.SalaryExpectation},
-					{"ApplicationSource", a.ApplicationSource},
-					{"timeOfExperience", a.timeOfExperience}}}}
-
-				if _, err = coll.UpdateOne(context.TODO(), filter, update); err != nil {
-					return Application{}, fmt.Errorf("Could not update application provided")
-				}
-
-				defer db.CloseConnectionToMongo(client)
-
-				UpdateApplicationOnJobs(a)
-				UpdateApplicationOnCandidates(a)
-
-				updateApplicantsInMemory()
-				return a, nil
-			}
+	if _, found := applications[a.ID]; found {
+		client, err := db.OpenConnectionToMongo()
+		if err != nil {
+			return Application{}, fmt.Errorf("Could not establish connection to Database")
 		}
+
+		coll := client.Database(db.GetDatabaseName()).Collection("Applications")
+		filter := bson.D{{"ID", a.ID}}
+		update := bson.D{{"$set", bson.D{
+			{"CandidateProfileID", a.CandidateProfileID},
+			{"JobRequisitionID", a.JobRequisitionID},
+			{"SalaryExpectation", a.SalaryExpectation},
+			{"ApplicationSource", a.ApplicationSource},
+			{"TimeOfExperience", a.TimeOfExperience}}}}
+
+		if _, err = coll.UpdateOne(context.TODO(), filter, update); err != nil {
+			return Application{}, fmt.Errorf("Could not update application provided")
+		}
+
+		defer db.CloseConnectionToMongo(client)
+
+		UpdateApplicationOnJobs(a)
+		UpdateApplicationOnCandidates(a)
+
+		updateApplicantsInMemory()
+		return a, nil
+	} else {
 		return Application{}, fmt.Errorf("Application with ID '%v' not found", a.ID)
 	}
-	return Application{}, fmt.Errorf("Missing Job Requisition and/or Candidate")
 }
 
+//In DB: Removes a Application record from the collection and updates the Application in memory.
+//Returns error if failed to complete the deletion on the DB
 func DeleteApplication(id int) error {
-	if app, found := applications[id]; found {
+	if _, found := applications[id]; found {
+
+		/*
 		//Remove application from Job Requisition
 		err := RemoveApplicationFromJobReq(*app)
 		if err != nil {
@@ -157,8 +161,24 @@ func DeleteApplication(id int) error {
 			AddApplicationToJobReq(*app)
 			return fmt.Errorf("Could not remove Application from Candidate")
 		}
+		*/
 
-		delete(applications, id)
+		client, err := db.OpenConnectionToMongo()
+
+		if err != nil {
+			return fmt.Errorf("Could not establish connection to Database")
+		}
+
+		coll := client.Database(db.GetDatabaseName()).Collection("Applications")
+		filter := bson.D{{"ID", id}}
+
+		if _, err = coll.DeleteOne(context.TODO(),filter); err != nil {
+			return fmt.Errorf("Could not delete Application with id provided")
+		}
+
+		defer db.CloseConnectionToMongo(client)
+
+		updateApplicantsInMemory()
 		return nil
 	}
 	return fmt.Errorf("Application with ID '%v' not found", id)
@@ -194,10 +214,11 @@ func updateApplicantsInMemory() int {
 		{"JobRequisitionID", 1},
 		{"SalaryExpectation", 1},
 		{"ApplicationSource", 1},
-		{"timeOfExperience", 1}}
+		{"TimeOfExperience", 1},
+	}
 	opts := options.Find().SetProjection(projection)
 
-	coll := client.Database(db.GetDatabaseName()).Collection("Candidates")
+	coll := client.Database(db.GetDatabaseName()).Collection("Applications")
 	cursor, err := coll.Find(context.TODO(), filter, opts)
 
 	var results []bson.D
