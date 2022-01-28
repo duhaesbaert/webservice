@@ -93,29 +93,27 @@ func (a applicationController) post(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a applicationController) put(id int, w http.ResponseWriter, r *http.Request) {
-	/*
-		app, err := a.parseRequest(r)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Could not parse application object"))
-			return
-		}
+	app, err := a.parseRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Could not parse application object"))
+		return
+	}
 
-		if id != app.ID {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("ID of submitted applicant must match ID in the URL"))
-			return
-		}
+	if id != app.ID {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("ID of submitted applicant must match ID in the URL"))
+		return
+	}
 
-		app, err = models.UpdateApplication(app)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		encodeResponseAsJSON(app, w)
-	*/
-	w.WriteHeader(http.StatusNotImplemented)
+	app, err = models.UpdateApplication(app)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	encodeResponseAsJSON(app, w)
+	//w.WriteHeader(http.StatusNotImplemented)
 }
 
 func (a applicationController) delete(id int, w http.ResponseWriter) {

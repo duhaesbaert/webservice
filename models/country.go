@@ -2,6 +2,11 @@ package models
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"webservice/db"
+
+	"context"
 )
 
 type Country struct {
@@ -11,23 +16,32 @@ type Country struct {
 }
 
 var (
-	countries     []*Country
-	nextCountryID = 1
+	countries = make(map[int]*Country)
+	nextCountryID = updateCountriesInMemory()
 )
 
+//In Memory: Returns the complete list of countries that has been.
+//Returns a hashmap containing the list of countries
 func GetCountries() []*Country {
-	return countries
+	countryArr := make([]*Country,0)
+	for _, v := range countries {
+		countryArr = append(countryArr, v)
+	}
+	return countryArr
 }
 
+//In Memory: Searches for a specific country on the hashmap.
+//Returns a country object and an error in case it was not possible to find the record
 func GetCountryByID(id int) (Country, error) {
-	for _, c := range countries {
-		if id == c.ID {
-			return *c, nil
-		}
+	if _, found := countries[id]; found {
+		return *countries[id], nil
 	}
+
 	return Country{}, fmt.Errorf("Country with ID '%v' not found", id)
 }
 
+//In DB: Creates a new country record to the collection and updates the countries in memory.
+//Returns a country object and an error in case it was not possible to create the record
 func AddCountry(c Country) (Country, error) {
 	if c.ID != 0 {
 		return Country{}, fmt.Errorf("Country must not include ID")
@@ -36,49 +50,113 @@ func AddCountry(c Country) (Country, error) {
 	if AlreadyExistByCode(c.Code) {
 		return Country{}, fmt.Errorf("Country with CODE '%v' already exists", c.Code)
 	}
+
+	//Validate if able to connect to MongoDB
+	client, err := db.OpenConnectionToMongo()
+	if err != nil {
+		return Country{}, fmt.Errorf("Could not establish connection to MongoDB")
+	}
+
+	coll := client.Database("myFirstDatabase").Collection("Countries")
+	doc := bson.D{
+		{"ID", nextCountryID},
+		{"Name", c.Name},
+		{"Code", c.Code}}
+
+	//Insert information into MongoDB
+	_ , err = coll.InsertOne(context.TODO(), doc)
+	if err != nil {
+		return Country{}, fmt.Errorf("Could not insert Country provided")
+	}
+
+	defer db.CloseConnectionToMongo(client)
+
 	c.ID = nextCountryID
-	nextCountryID++
-	countries = append(countries, &c)
+	updateCountriesInMemory()
 	return c, nil
 }
 
+//In DB: Updates a country record on the collection and updates the countries in memory.
+//Returns a country object and an error in case it was not possible to update the record
 func UpdateCountry(c Country) (Country, error) {
-	for i, cnt := range countries {
-		if c.ID == cnt.ID {
-			countries[i] = &c
-			return c, nil
+	if _, found := countries[c.ID]; found {
+		countries[c.ID] = &c
+
+		//establish connection to database
+		client, err := db.OpenConnectionToMongo()
+		if err != nil {
+			return Country{}, fmt.Errorf("Could not establish connection to database")
 		}
+
+		//create parameters for updating the values of the country
+		coll := client.Database(db.GetDatabaseName()).Collection("Countries")
+		filter := bson.D{{"ID", c.ID}}
+		update := bson.D{{"$set",bson.D{{"Name", c.Name},{"Code", c.Code}}}}
+
+		//execute update on the database record
+		_, err = coll.UpdateOne(context.TODO(), filter, update)
+		if err != nil {
+			return Country{}, fmt.Errorf("Could not update country on the database")
+		}
+
+		defer db.CloseConnectionToMongo(client)
+
+		//Update the list stored in memory
+		updateCountriesInMemory()
+		updateJobRequisitionInMemory()
+		updateCandidatesInMemory()
+		return c, nil
 	}
+
 	return Country{}, fmt.Errorf("Country to be updated not found")
 }
 
+//In DB: Removes a country record from the collection and updates the countries in memory.
+//Returns error if failed to complete the deletion on the DB
 func RemoveCountryByID(id int) error {
-	for i, c := range countries {
-		if id == c.ID {
-			countries = append(countries[:i], countries[i+1:]...)
-			return nil
+	if _, found := countries[id]; found {
+		delete(countries, id)
+
+		client, err := db.OpenConnectionToMongo()
+		if err != nil {
+			return fmt.Errorf("Could not establish connection to database")
 		}
+
+		//create parameters for updating the values of the country
+		coll := client.Database(db.GetDatabaseName()).Collection("Countries")
+		filter := bson.D{{"ID", id}}
+
+		//Execute deletion on the database
+		_, err = coll.DeleteOne(context.TODO(), filter)
+		if err != nil {
+			return fmt.Errorf("Could not delete Country")
+		}
+
+		defer db.CloseConnectionToMongo(client)
+
+		//update the list stored in memory
+		updateCountriesInMemory()
+		updateJobRequisitionInMemory()
+		updateCandidatesInMemory()
+		return nil
 	}
+
 	return fmt.Errorf("Country with ID '%v' not found", id)
 }
 
-//Validate if the country with given ID already exists on the list
+//In Memory:Validate if the country with given ID already exists on the list.
 //Returns true when country exist, and false when it doesn't
 func AlreadyExistById(id int) bool {
-	if id == 0 {
-		return true
+	_, err := GetCountryByID(id)
+
+	if err != nil {
+		return false
 	}
 
-	for _, c := range countries {
-		if id == c.ID {
-			return true
-		}
-	}
-
-	return false
+	return true
 }
 
-//Validate if the country already exists on the list
+//Validate if the country already exists on the list.
 //Returns true when the country exists and false when it doesn't
 func AlreadyExistByCode(code string) bool {
 	for _, c := range countries {
@@ -87,4 +165,58 @@ func AlreadyExistByCode(code string) bool {
 		}
 	}
 	return false
+}
+
+//Updates the hashmap containing all the countries to work with them in memory.
+//Return the next ID to be added into the Database
+func updateCountriesInMemory() int {
+	client, err := db.OpenConnectionToMongo()
+
+	if err != nil {
+		return -1
+	}
+
+	filter := bson.D{}
+	projection := bson.D{
+		{"ID",1},
+		{"Name", 1},
+		{"Code", 1}}
+	opts := options.Find().SetProjection(projection)
+
+	coll := client.Database(db.GetDatabaseName()).Collection("Countries")
+	cursor, err := coll.Find(context.TODO(), filter, opts)
+
+	var results []bson.D
+
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+
+	defer db.CloseConnectionToMongo(client)
+
+	biggestId := 1
+	countries = make(map[int]*Country)
+	for _, v := range results {
+		c := bsonToCountry(v)
+
+		countries[c.ID] = &c
+
+		if c.ID > biggestId{
+			biggestId = c.ID
+		}
+	}
+
+	return biggestId+1
+}
+
+//Receives a bson object to execute the conversion.
+//Returns a Country object.
+func bsonToCountry(v bson.D) Country {
+	bsonBytes, _ := bson.Marshal(v)
+
+	var c Country
+	//deconvert the byarray into a struct object
+	bson.Unmarshal(bsonBytes, &c)
+
+	return c
 }
