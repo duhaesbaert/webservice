@@ -34,7 +34,6 @@ func GetCandidates() []*Candidate {
 		candArr = append(candArr, v)
 	}
 	return candArr
-	//return candidates
 }
 
 //In Memory: Searches for a specific Candidate on the hashmap.
