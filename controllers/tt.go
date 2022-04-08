@@ -1,4 +1,4 @@
-package tt
+package main
 
 import (
 	"fmt"
@@ -79,12 +79,11 @@ func main() {
 		"correto",
 	}
 	for _, word := range wordsToRemove {
-		trie.root = remove(*trie.root, word, 0)
+		remove(trie.root, word, 0)
 	}
 
 	fmt.Printf("Palavras")
 	for _, word := range wordsToRemove {
-		trie.insert(word)
 		fmt.Print(" \"" + word + "\"")
 	}
 	fmt.Println(" removidas.")
@@ -93,7 +92,7 @@ func main() {
 	fmt.Println("BUSCAR POR PALAVRAS APÓS REMOÇÃO")
 	wordFound = make([]string, 0)
 	wordNotFound = make([]string, 0)
-	for _, word := range wordsToSearch {
+	for _, word := range wordsToAdd {
 		if found := trie.search(word); !found {
 			wordNotFound = append(wordNotFound, word)
 			continue
@@ -120,33 +119,33 @@ func startTrie() *trie {
 }
 
 func (t *trie) insert(s string) {
-	current := t.root
+	tn := t.root
 	for i := 0; i < len(s); i++ {
 		navIndex := s[i] - 'a'
-		if current.children[navIndex] == nil {
-			current.children[navIndex] = &trieNode{}
+		if tn.children[navIndex] == nil {
+			tn.children[navIndex] = &trieNode{}
 		}
-		current = current.children[navIndex]
+		tn = tn.children[navIndex]
 	}
-	current.isEnd = true
+	tn.isEnd = true
 }
 
 func (t *trie) search(s string) bool {
-	current := t.root
+	tn := t.root
 	for i := 0; i < len(s); i++ {
 		navIndex := s[i] - 'a'
-		if current.children[navIndex] == nil {
+		if tn.children[navIndex] == nil {
 			return false
 		}
-		current = current.children[navIndex]
+		tn = tn.children[navIndex]
 	}
 
-	return current.isEnd
+	return tn.isEnd
 }
 
-func remove(t trieNode, s string, depth int) *trieNode {
-	if (t == trieNode{}) {
-		return &trieNode{}
+func remove(t *trieNode, s string, depth int) *trieNode {
+	if t == nil {
+		return nil
 	}
 
 	if depth == len(s) {
@@ -154,23 +153,23 @@ func remove(t trieNode, s string, depth int) *trieNode {
 			t.isEnd = false
 		}
 
-		if isEmpty(t) {
-			t = trieNode{}
+		if isEmpty(*t) {
+			t = nil
 		}
-		return &t
+		return t
 	}
 	navIndex := int(s[depth] - 'a')
-	t.children[navIndex] = remove(t, s, depth+1)
+	t.children[navIndex] = remove(t.children[navIndex], s, depth+1)
 
-	if isEmpty(t) && t.isEnd == false {
-		t = trieNode{}
+	if isEmpty(*t) && t.isEnd == false {
+		t = nil
 	}
-	return &t
+	return t
 }
 
 func isEmpty(t trieNode) bool {
 	for i := 0; i < ALPHABETSIZE; i++ {
-		if (t.children[i] != &trieNode{}) {
+		if t.children[i] != nil {
 			return false
 		}
 	}
