@@ -79,7 +79,7 @@ func main() {
 		"correto",
 	}
 	for _, word := range wordsToRemove {
-		remove(trie.root, word, 0)
+		trie.remove(word)
 	}
 
 	fmt.Printf("Palavras")
@@ -143,7 +143,13 @@ func (t *trie) search(s string) bool {
 	return tn.isEnd
 }
 
-func remove(t *trieNode, s string, depth int) *trieNode {
+func (t *trie) remove(s string) bool {
+	removeRec(t.root, s, 0)
+
+	return !(t.search(s))
+}
+
+func removeRec(t *trieNode, s string, depth int) *trieNode {
 	if t == nil {
 		return nil
 	}
@@ -159,7 +165,7 @@ func remove(t *trieNode, s string, depth int) *trieNode {
 		return t
 	}
 	navIndex := int(s[depth] - 'a')
-	t.children[navIndex] = remove(t.children[navIndex], s, depth+1)
+	t.children[navIndex] = removeRec(t.children[navIndex], s, depth+1)
 
 	if isEmpty(*t) && t.isEnd == false {
 		t = nil
